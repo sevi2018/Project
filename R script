@@ -1,0 +1,400 @@
+###script algorithm program used to phase 1000 genomes data. Below its an example of the script applied to HLA-B region which includes 29 SNPs. example file
+
+
+setwd("work directory")
+
+#HLA_B; for each SNP of the region we divide alleles1 and alleles 2 and join them into an haplotype
+x<- read.table("snps6.2b.ped",header=0)
+x$al1<- paste(x$V7,x$V9,x$V11,x$V13,x$V15,x$V17,x$V19,x$V21,x$V23,x$V25,x$V27,x$V29,x$V31,x$V33,x$V35,x$V37,x$V39,x$V41,x$V43,x$V45,x$V47,x$V49,x$V51,x$V53,x$V55,x$V57,x$V59,x$V61,x$V63,sep="")
+x$al2<- paste(x$V8,x$V10,x$V12,x$V14,x$V16,x$V18,x$V20,x$V22,x$V24,x$V26,x$V28,x$V30,x$V32,x$V34,x$V36,x$V38,x$V40,x$V42,x$V44,x$V46,x$V48,x$V50,x$V52,x$V54,x$V56,x$V58,x$V60,x$V62,x$V64,sep="")
+x1<- x[c(2,65,66)]
+colnames(x1)[1]<- "id"
+x1$eq<- ifelse(x1$al1==x1$al2,1,0)###define the number of homozygotes and heterozygotes in 1000 genomes phase 3 2504 samples
+table(x1$eq)
+## heterozygouse       homozygotes
+## 2085                    419
+
+
+##for all samples we apply the 10 based numeric code where for each of the 29 SNPs we do transform its genotype into a number (see code table). At the end of this step, for each one of the 2504 samples we have a a numeric code of 29 numbers which correspond to the number of SNPs
+x1$geno<- ifelse(x1$eq==0,'het','hom')
+table(x1$geno)
+
+t<- x1
+
+for(i in 1:29){
+t[,paste('snp',i,'_1',sep='')]<- substring(t$al1,i,i)
+t[,paste('snp',i,'_2',sep='')]<- substring(t$al2,i,i)
+i= i + 1
+}
+
+
+for (i in 1:29){
+    t[,paste('snp',i,sep='')]<- paste(t[,paste('snp',i,'_1',sep='')],t[,paste('snp',i,'_2',sep='')],sep='')
+i=i+1
+}
+
+t1<- t[c(1:3,5,63:92)]
+ 
+ for(i in 1:29){
+ t1[,paste('snp',i,'_n',sep='')]<- ifelse(t1[,paste('snp',i,sep='')]=="AA",0,
+ ifelse(t1[,paste('snp',i,sep='')]=="CC",1,
+ ifelse(t1[,paste('snp',i,sep='')]=="GG",2,
+ ifelse(t1[,paste('snp',i,sep='')]=="TT",3,
+ ifelse(t1[,paste('snp',i,sep='')]=="AC"|t1[,paste('snp',i,sep='')]=="CA",4,
+ ifelse(t1[,paste('snp',i,sep='')]=="AG"|t1[,paste('snp',i,sep='')]=="GA",5,
+ ifelse(t1[,paste('snp',i,sep='')]=="AT"|t1[,paste('snp',i,sep='')]=="TA",6,
+ ifelse(t1[,paste('snp',i,sep='')]=="CG"|t1[,paste('snp',i,sep='')]=="GC",7,
+ ifelse(t1[,paste('snp',i,sep='')]=="CT"|t1[,paste('snp',i,sep='')]=="TC",8,
+ ifelse(t1[,paste('snp',i,sep='')]=="GT"|t1[,paste('snp',i,sep='')]=="TG",9,'NA'))))))))))
+ }
+
+t1$all<- paste(t1$snp1_n,t1$snp2_n,t1$snp3_n,t1$snp4_n,t1$snp5_n,t1$snp6_n,t1$snp7_n,t1$snp8_n,t1$snp9_n,t1$snp10_n,t1$snp11_n,t1$snp12_n,t1$snp13_n,t1$snp14_n,t1$snp15_n,t1$snp16_n,t1$snp17_n,t1$snp18_n,t1$snp19_n,t1$snp20_n,t1$snp21_n,t1$snp22_n,t1$snp23_n,t1$snp24_n,t1$snp25_n,t1$snp26_n,t1$snp27_n,t1$snp28_n,t1$snp29_n,sep="")
+
+
+###Let's select the homozygose and the unambiguous haplotypes. Note that the numeric code of homozygotes , defined before, is made of number ranging from 0 to 3
+hom<- t1[which(t1$geno=="hom"),]
+hom1<- hom[c(1,2,4,64)]
+hom1$s<-1
+hom2<- aggregate(hom1$s,by=list(hom1$all),FUN=sum)
+names(hom2)<- c('all','nb')
+hom3<- merge(hom1,hom2,by='all')
+hom4=hom3[c(3,1,4,6)]
+hom5=hom4[!duplicated(hom4),]
+hom6<- hom5[order(hom5$nb,decreasing=TRUE),]
+hom6$Var1<- LETTERS[seq(1:nrow(hom6))]
+hom6$Var2<- LETTERS[seq(1:nrow(hom6))]### 12 alleles or haplotypes defined unambiguous because obtained from homozygotes ordered according to the decreasing frequence
+
+# CTCCCCCGCCTCATTGCCTGGTAAATCGC 13111112113103321132230003121  hom 218    A    A
+# GGTCGCCGCCTTACCGCCTGGTAAATTAC 22312112113301121132230003301  hom  43    B    B
+# GGCGGCCAACCCGTTATCCAAGTGCCTAC 22122110011123303110023211301  hom  35    C    C
+# GGCGGCCAACCCGTTGCTCAAGTGCCTAC 22122110011123321310023211301  hom  33    D    D
+# GGCGGCTGCCTCGCCGCCTGGTTGCCCGC 22122132113121121132233211121  hom  32    E    E
+# CTCCCGCGCCTCACCGCCTGGTAAATCGC 13111212113101121132230003121  hom  23    F    F
+# CTCCCGCGCCTCACCGCCTGGTTGCCTAC 13111212113101121132233211301  hom  19    G    G
+# CTCCCCTGCCTCGCCGCCCGGTAAATTAC 13111132113121121112230003301  hom   5    H    H
+# CTCCCGCGCCTCACCGCCTGGTAAATTAC 13111212113101121132230003301  hom   4    I    I
+# GGTCGCCGCCTCACCGCCTGGTAAATTAC 22312112113101121132230003301  hom   4    J    J
+# CTCCCCCAACCCGTTATCCAAGTGCCTAC 13111110011123303110023211301  hom   2    K    K
+# GGCCCGTGCTCCACCGCCTGGTAGCCTAA 22111232131101121132230211300  hom   1    L    L
+
+###Let's create all possible combination of heterozygotes given the known homozygote alleles
+
+cc<- expand.grid(hom6$Var1,hom6$Var2)
+cc$eq<- ifelse(cc$Var1==cc$Var2,0,1)
+cc1<- cc[which(cc$eq==1),]
+cc1$eq<- seq(1:nrow(cc1))##For HLA-B region, from all possible combinations among the 12 homozygotes, we can have till 132 possible heterozygotes.
+
+hz1=hom6[c(5,1,2)]
+hz2=hom6[c(6,1,2)]
+hz1b= merge(hz1,cc1,by='Var1')
+colnames(hz2)[2]='al2'
+hz3=merge(hz1b,hz2,by='Var2')
+hz4=hz3[c(2,1,3,4,6,7,5)]
+hz5=hz4[order(hz4$eq),]
+
+for(i in 1:29){
+    hz5[,paste('snp',i,'_1',sep='')]<- substring(hz5$all.x,i,i)
+    hz5[,paste('snp',i,'_2',sep='')]<- substring(hz5$all.y,i,i)
+    i= i + 1
+}
+###create the numeric code of the heterozygotes made from all possible combination of the 12 known homozygotes.
+for(i in 1:29){
+    hz5[,paste('snp',i,'g',sep='')]<- ifelse(hz5[,paste('snp',i,'_1',sep='')]==0 & hz5[,paste('snp',i,'_2',sep='')]==0,0,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==1 & hz5[,paste('snp',i,'_2',sep='')]==1,1,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==2 & hz5[,paste('snp',i,'_2',sep='')]==2,2,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==3 & hz5[,paste('snp',i,'_2',sep='')]==3,3,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==0 & hz5[,paste('snp',i,'_2',sep='')]==1|hz5[,paste('snp',i,'_1',sep='')]==1 & hz5[,paste('snp',i,'_2',sep='')]==0,4,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==0 & hz5[,paste('snp',i,'_2',sep='')]==2|hz5[,paste('snp',i,'_1',sep='')]==2 & hz5[,paste('snp',i,'_2',sep='')]==0,5,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==0 & hz5[,paste('snp',i,'_2',sep='')]==3|hz5[,paste('snp',i,'_1',sep='')]==3 & hz5[,paste('snp',i,'_2',sep='')]==0,6,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==1 & hz5[,paste('snp',i,'_2',sep='')]==2|hz5[,paste('snp',i,'_1',sep='')]==2 & hz5[,paste('snp',i,'_2',sep='')]==1,7,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==1 & hz5[,paste('snp',i,'_2',sep='')]==3|hz5[,paste('snp',i,'_1',sep='')]==3 & hz5[,paste('snp',i,'_2',sep='')]==1,8,
+    ifelse(hz5[,paste('snp',i,'_1',sep='')]==2 & hz5[,paste('snp',i,'_2',sep='')]==3|hz5[,paste('snp',i,'_1',sep='')]==3 & hz5[,paste('snp',i,'_2',sep='')]==2,9,'NA'))))))))))
+    i=i+1
+}
+
+hz5$all<- paste(hz5$snp1g,hz5$snp2g,hz5$snp3g,hz5$snp4g,hz5$snp5g,hz5$snp6g,hz5$snp7g,hz5$snp8g,hz5$snp9g,hz5$snp10g,hz5$snp11g,hz5$snp12g,hz5$snp13g,hz5$snp14g,hz5$snp15g,hz5$snp16g,hz5$snp17g,hz5$snp18g,hz5$snp19g,hz5$snp20g,hz5$snp21g,hz5$snp22g,hz5$snp23g,hz5$snp24g,hz5$snp25g,hz5$snp26g,hz5$snp27g,hz5$snp28g,hz5$snp29g,sep="")
+hz6=hz5[c(1,2,95)]
+hz6_= hz6[!duplicated(hz6$all),]
+hz6_$geno='het'
+homz= hom6[c(5,6,2,3)]
+als= rbind(homz,hz6_)
+table(als$geno)
+# het hom
+# 66   12
+
+alleles=hom6[c(1,5)]
+al1=merge(als,alleles,by='Var1')
+names(alleles)=c('al2','Var2')
+al2=merge(al1,alleles,by='Var2')
+al3=al2[c(2,1,5,6,3,4)]
+al3$g=paste(al3$Var1,al3$Var2,sep='')
+
+### merge by numeric code all 2504 samples (we did establish as first step a numeric code for all samples) with the haplotypes (12 homozygotes and 66 heterozygotes)
+t2= t1[c(1:4,64)]
+t2$s= seq(1:nrow(t2))
+t3= merge(t2,al3,by='all',all=TRUE)
+t4=t3[order(t3$s),]
+t5= t4[which(t4$id!='NA'),]
+####
+#######How many IDs am I able to correctly phase by combining the homozygotes alleles
+id0=t5[c(2,1,11,12)]
+id0_=id0[which(id0$g!='NA'),]# For HLA-B region we are able to phase 2209 of 2504 total samples (88.2%) from combining homozygotes haplotypes
+###How many genotype am I missing?
+unk= t5[which(is.na(t5$g=='NA')),]##Number of individuals we were not able to phase by combining homozygotes haplotypes: 295 samples (11.8%)
+bo5=unk
+
+
+
+##################### THIS IS THE START POINT FOR EACH NEW LOOP
+sco=bo5[c(1)]
+sco$x=1
+sc1=aggregate(sco$x,by=list(sco$all),FUN=sum)
+sc2=sc1[order(-sc1$x),]###we identify 188 heterozygotes haplotypes not defined by the known alleles
+sc3=sc2[which(sc2$x>1),]##after removing the ones which were reported just in one sample (possible genotyping errors) and order them by decreasing frequency we get 66 haplotypes
+
+#       haplotype             freq
+# 13111712113103321132230003121 29
+# 79177715418153321885596548851  8
+# 22122115418153321885596548851  6
+# 79817112113808821132590003851  6
+# 22122110011123321885596548301  5
+# 22122715418158858185593211301  5
+# 79177715418153321885593211301  5
+# 79817112113803321132230003851  5
+# 13111112113103321132590003121  4
+# 13111212113101121182230003121  3
+# 19111112113103321132230003121  3
+# 22122185418128858115596548301  3
+# 22122715418158821885596548851  3
+## and so on!!!
+
+####Our question is are these 66 heterozygotes haplotypes the result of one of the known allele and a new not defined allele? Can we define without any doubt the new allele?
+##select the unknown haplotype in order of frequency
+x=1:nrow(sc3)
+for (val in x) {
+one=as.data.frame(sc3[val,])
+##decompose its code into single number for each SNP
+for(i in 1:29){
+    one[,paste('snp',i,sep='')]<- substring(one$Group.1,i,i)
+    i= i + 1
+}
+##detect the heterozygotes SNPs in the haplotype selected
+sapply(one,class)##"character"
+cols.num=c(3:31)
+one[cols.num]=sapply(one[cols.num],as.numeric)
+sapply(one,class)##"numeric"
+o=one[,3:31]
+o1=as.data.frame(lapply(o,function(x) x>=4))
+o2=as.data.frame(lapply(o,function(x) x<=3))
+all=rbind(o,o1,o2)
+al=as.data.frame(t(all))
+names(al)=c('als','het','hom')
+het=al[which(al$het==1),]
+##decompose the heterozygotes in its alleles
+het$a1=ifelse(het$als==4,0,
+ifelse(het$als==5,0,
+ifelse(het$als==6,0,
+ifelse(het$als==7,1,
+ifelse(het$als==8,1,
+ifelse(het$als==9,2,'NA'))))))
+
+het$a2=ifelse(het$als==4,1,
+ifelse(het$als==5,2,
+ifelse(het$als==6,3,
+ifelse(het$als==7,2,
+ifelse(het$als==8,3,
+ifelse(het$als==9,3,'NA'))))))
+
+##detect new alleles
+l=as.data.frame(t(het))
+l1=l[4:5,]
+het1=expand.grid(l1)
+names(het1)=names(l)
+
+hom=al[which(al$hom==1),]
+hm=as.data.frame(t(hom))
+hm1=hm[1,]
+hm2=hm1[rep(seq_len(nrow(hm1)),each=nrow(het1)),]
+hm3=cbind(hm2,het1)
+hm4= hm3[,c('snp1','snp2', 'snp3','snp4','snp5','snp6','snp7','snp8','snp9','snp10','snp11','snp12','snp13','snp14','snp15','snp16','snp17','snp18','snp19','snp20','snp21','snp22','snp23','snp24','snp25','snp26','snp27','snp28','snp29')]
+hm4$new_als=paste(hm4$snp1,hm4$snp2,hm4$snp3,hm4$snp4,hm4$snp5,hm4$snp6,hm4$snp7,hm4$snp8,hm4$snp9,hm4$snp10,hm4$snp11,hm4$snp12,hm4$snp13,hm4$snp14,hm4$snp15,hm4$snp16,hm4$snp17,hm4$snp18,hm4$snp19,hm4$snp20,hm4$snp21,hm4$snp22,hm4$snp23,hm4$snp24,hm4$snp25,hm4$snp26,hm4$snp27,hm4$snp28,hm4$snp29,sep='')
+hm5=hm4[!duplicated(hm4$new_als),]
+new=hm5[c(30)]
+names(new)='all'
+new$x='new'
+##is at least one of the two alleles that make up the unknown heterozygous a known allele?
+hm6=merge(hom6,new,by='all')
+### iif one of the alleles making up heterozygotes corresponds to more than one known allele we stop with the definition of new alleles from this haplotype and we move on to the next unknown haplotype in order of frequency, otherwise we go on in the process of identification of new alleles
+if (nrow(hm6) == 1){
+        break
+      }
+print(val)
+}
+
+## To identify the new allele we do subctract the numeric code of the known haplotype from the numeric code of the uknonw heterozygote
+old=hm6[c(1,2)]
+for(i in 1:29){
+    old[,paste('snp',i,sep='')]<- substring(old$all,i,i)
+    i= i + 1
+}
+cb=one[c(1,3:31)]
+names(cb)=c('code','s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','s12','s13','s14','s15','s16','s17','s18','s19','s20','s21','s22','s23','s24','s25','s26','s27','s28','s29')
+oo=cbind(cb,old)
+
+##get the numeric code of the unknown allele
+for(i in 1:29){
+    oo[,paste('snp',i,'n',sep='')]<- ifelse(oo[,paste('s',i,sep='')]==0 & oo[,paste('snp',i,sep='')]==0,0,
+    ifelse(oo[,paste('s',i,sep='')]==1 & oo[,paste('snp',i,sep='')]==1,1,
+    ifelse(oo[,paste('s',i,sep='')]==2 & oo[,paste('snp',i,sep='')]==2,2,
+    ifelse(oo[,paste('s',i,sep='')]==3 & oo[,paste('snp',i,sep='')]==3,3,
+    ifelse(oo[,paste('s',i,sep='')]==4 & oo[,paste('snp',i,sep='')]==1,0,
+    ifelse(oo[,paste('s',i,sep='')]==4 & oo[,paste('snp',i,sep='')]==0,1,
+    ifelse(oo[,paste('s',i,sep='')]==5 & oo[,paste('snp',i,sep='')]==2,0,
+    ifelse(oo[,paste('s',i,sep='')]==5 & oo[,paste('snp',i,sep='')]==0,2,
+    ifelse(oo[,paste('s',i,sep='')]==6 & oo[,paste('snp',i,sep='')]==3,0,
+    ifelse(oo[,paste('s',i,sep='')]==6 & oo[,paste('snp',i,sep='')]==0,3,
+    ifelse(oo[,paste('s',i,sep='')]==7 & oo[,paste('snp',i,sep='')]==1,2,
+    ifelse(oo[,paste('s',i,sep='')]==7 & oo[,paste('snp',i,sep='')]==2,1,
+    ifelse(oo[,paste('s',i,sep='')]==8 & oo[,paste('snp',i,sep='')]==1,3,
+    ifelse(oo[,paste('s',i,sep='')]==8 & oo[,paste('snp',i,sep='')]==3,1,
+    ifelse(oo[,paste('s',i,sep='')]==9 & oo[,paste('snp',i,sep='')]==2,3,
+    ifelse(oo[,paste('s',i,sep='')]==9 & oo[,paste('snp',i,sep='')]==3,2,9))))))))))))))))
+    i=i+1
+}
+
+oo$new= paste(oo$snp1n,oo$snp2n,oo$snp3n,oo$snp4n,oo$snp5n,oo$snp6n,oo$snp7n,oo$snp8n,oo$snp9n,oo$snp10n,oo$snp11n,oo$snp12n,oo$snp13n,oo$snp14n,oo$snp15n,oo$snp16n,oo$snp17n,oo$snp18n,oo$snp19n,oo$snp20n,oo$snp21n,oo$snp22n,oo$snp23n,oo$snp24n,oo$snp25n,oo$snp26n,oo$snp27n,oo$snp28n,oo$snp29n,sep="")
+###Build the new allele from the code
+for(i in 1:29){
+    oo[,paste('known',i,sep='')]<- substring(oo$al1,i,i)
+    i= i + 1
+}
+o1=oo[c(92:120,33:90)]
+##define the new haplotype in bases
+for(i in 1:29){
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==0 & o1[,paste('snp',i,'n',sep='')]==0 & o1[,paste('known',i,sep='')]=='A','A',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==0 & o1[,paste('snp',i,'n',sep='')]==1 & o1[,paste('known',i,sep='')]=='A','C',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==1 & o1[,paste('snp',i,'n',sep='')]==0 & o1[,paste('known',i,sep='')]=='C','A',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==0 & o1[,paste('snp',i,'n',sep='')]==2 & o1[,paste('known',i,sep='')]=='A','G',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==2 & o1[,paste('snp',i,'n',sep='')]==0 & o1[,paste('known',i,sep='')]=='G','A',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==0 & o1[,paste('snp',i,'n',sep='')]==3 & o1[,paste('known',i,sep='')]=='A','T',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==3 & o1[,paste('snp',i,'n',sep='')]==0 & o1[,paste('known',i,sep='')]=='T','A',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==1 & o1[,paste('snp',i,'n',sep='')]==1 & o1[,paste('known',i,sep='')]=='C','C',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==1 & o1[,paste('snp',i,'n',sep='')]==2 & o1[,paste('known',i,sep='')]=='C','G',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==2 & o1[,paste('snp',i,'n',sep='')]==1 & o1[,paste('known',i,sep='')]=='G','C',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==1 & o1[,paste('snp',i,'n',sep='')]==3 & o1[,paste('known',i,sep='')]=='C','T',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==3 & o1[,paste('snp',i,'n',sep='')]==1 & o1[,paste('known',i,sep='')]=='T','C',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==2 & o1[,paste('snp',i,'n',sep='')]==2 & o1[,paste('known',i,sep='')]=='G','G',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==2 & o1[,paste('snp',i,'n',sep='')]==3 & o1[,paste('known',i,sep='')]=='G','T',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==3 & o1[,paste('snp',i,'n',sep='')]==2 & o1[,paste('known',i,sep='')]=='T','G',
+    o1[,paste('new',i,sep='')]<- ifelse(o1[,paste('snp',i,sep='')]==3 & o1[,paste('snp',i,'n',sep='')]==3 & o1[,paste('known',i,sep='')]=='T','T','NA'))))))))))))))))
+}
+
+o1$al1=paste(o1$new1,o1$new2,o1$new3,o1$new4,o1$new5,o1$new6,o1$new7,o1$new8,o1$new9,o1$new10,o1$new11,o1$new12,o1$new13,o1$new14,o1$new15,o1$new16,o1$new17,o1$new18,o1$new19,o1$new20,o1$new21,o1$new22,o1$new23,o1$new24,o1$new25,o1$new26,o1$new27,o1$new28,o1$new29,sep='')
+o1$all=paste(o1$snp1n,o1$snp2n,o1$snp3n,o1$snp4n,o1$snp5n,o1$snp6n,o1$snp7n,o1$snp8n,o1$snp9n,o1$snp10n,o1$snp11n,o1$snp12n,o1$snp13n,o1$snp14n,o1$snp15n,o1$snp16n,o1$snp17n,o1$snp18n,o1$snp19n,o1$snp20n,o1$snp21n,o1$snp22n,o1$snp23n,o1$snp24n,o1$snp25n,o1$snp26n,o1$snp27n,o1$snp28n,o1$snp29n,sep='')
+
+
+
+######## Add the new haplotype detected in silico to the haplotypes identified from homosygotes and repeat the identification process
+n1=hom6 ###This step must be run only in the resolution of the first unknown heterozygote haplotype or loop 1, you have to skip it for all the next loops and go to the line below
+nh=n1[c(1,2)]
+new=o1[c(117,118)]
+n1=rbind(nh,new)
+n1$Var1<- LETTERS[seq(1:nrow(n1))]
+n1$Var2<- LETTERS[seq(1:nrow(n1))]
+
+
+cc<- expand.grid(n1$Var1,n1$Var2)
+cc$eq<- ifelse(cc$Var1==cc$Var2,0,1)
+cc1<- cc[which(cc$eq==1),]
+cc1$eq<- seq(1:nrow(cc1))
+
+n2= merge(n1,cc1,by='Var1')
+n3=n2[c(3,1,5,6)]
+colnames(n3)[3]='Var2'
+n4=merge(n3,n1,by='Var2')
+n5=n4[order(n4$eq),]
+n6=n5[c(4,1,6,3,2)]
+names(n6)=c('Nb','Var1','al1','Var2','al2')
+
+###Build new combination of alleles using the new allele
+
+for(i in 1:29){
+    n6[,paste('snp',i,'_1',sep='')]<- substring(n6$al1,i,i)
+    n6[,paste('snp',i,'_2',sep='')]<- substring(n6$al2,i,i)
+    i= i + 1
+}
+
+for(i in 1:29){
+    n6[,paste('snp',i,'g',sep='')]<- ifelse(n6[,paste('snp',i,'_1',sep='')]==0 & n6[,paste('snp',i,'_2',sep='')]==0,0,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==1 & n6[,paste('snp',i,'_2',sep='')]==1,1,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==2 & n6[,paste('snp',i,'_2',sep='')]==2,2,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==3 & n6[,paste('snp',i,'_2',sep='')]==3,3,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==0 & n6[,paste('snp',i,'_2',sep='')]==1|n6[,paste('snp',i,'_1',sep='')]==1 & n6[,paste('snp',i,'_2',sep='')]==0,4,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==0 & n6[,paste('snp',i,'_2',sep='')]==2|n6[,paste('snp',i,'_1',sep='')]==2 & n6[,paste('snp',i,'_2',sep='')]==0,5,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==0 & n6[,paste('snp',i,'_2',sep='')]==3|n6[,paste('snp',i,'_1',sep='')]==3 & n6[,paste('snp',i,'_2',sep='')]==0,6,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==1 & n6[,paste('snp',i,'_2',sep='')]==2|n6[,paste('snp',i,'_1',sep='')]==2 & n6[,paste('snp',i,'_2',sep='')]==1,7,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==1 & n6[,paste('snp',i,'_2',sep='')]==3|n6[,paste('snp',i,'_1',sep='')]==3 & n6[,paste('snp',i,'_2',sep='')]==1,8,
+    ifelse(n6[,paste('snp',i,'_1',sep='')]==2 & n6[,paste('snp',i,'_2',sep='')]==3|n6[,paste('snp',i,'_1',sep='')]==3 & n6[,paste('snp',i,'_2',sep='')]==2,9,'NA'))))))))))
+    i=i+1
+}
+
+n6$all<- paste(n6$snp1g,n6$snp2g,n6$snp3g,n6$snp4g,n6$snp5g,n6$snp6g,n6$snp7g,n6$snp8g,n6$snp9g,n6$snp10g,n6$snp11g,n6$snp12g,n6$snp13g,n6$snp14g,n6$snp15g,n6$snp16g,n6$snp17g,n6$snp18g,n6$snp19g,n6$snp20g,n6$snp21g,n6$snp22g,n6$snp23g,n6$snp24g,n6$snp25g,n6$snp26g,n6$snp27g,n6$snp28g,n6$snp29g,sep="")
+n7=n6[c(2,4,93)]
+n7_= n7[!duplicated(n7$all),]
+n7_$geno='het'
+homz= n1[c(2,3,4)]
+homz$geno='hom'
+als= rbind(homz,n7_)
+table(als$geno)
+
+# het hom
+# 78    13
+
+als$g=paste(als$Var1,als$Var2,sep='')
+###Try to identify the alleles of people with still no genotype idenityfied
+bo1=bo5[c(2,1,6)]
+names(bo1)=c('id','all','s')
+bo1$s= seq(1:nrow(bo1))
+bo2= merge(bo1,als,by='all',all=TRUE)
+bo3=bo2[order(bo2$s),]
+bo4= bo3[which(bo3$id!='NA'),]
+
+###LOOP1: CTCCCGCGCCTCATTGCCTGGTAAATCGC 13111212113103321132230003121    M new allele identified
+id1=bo4[c(2,1,6,7)]
+id1_=id1[which(id1$g!='NA'),]##through this new allele we were able to phase 40 individuals
+
+bo5= bo4[which(is.na(bo4$g=='NA')),]##255 (10.2%)
+### START NEW LOOP REPEAT THE CODE FROM LINE 150 TO LINE 367
+##
+
+###ALLELE IDENTIFIED IN LOOP2:GGCGGCCGCCTCATTGCCTGGTAAATCGC 22122112113103321132230003121    N
+id2=bo4[c(2,1,6,7)]
+id2_=id2[which(id2$g!='NA'),]##Number of individuals phased throught the allele identified in loop 2:10
+
+###ALLELE IDENTIFIED IN LOOP3:GGCGGCCAACCCGTTGCCTGGTAAATTAC 22122110011123321132230003301    O
+id3=bo4[c(2,1,6,7)]
+id3_=id3[which(id3$g!='NA'),]####Number of individuals phased throught the allele identified in loop 3:6
+
+###ALLELE IDENTIFIED IN LOOP4:GGCGGGCGCCTCACCGCCTGGTTGCCTAC 22122212113101121132233211301    P
+id4=bo4[c(2,1,6,7)]
+id4_=id4[which(id4$g!='NA'),]######Number of individuals phased throught the allele identified in loop 4:7
+
+###ALLELE IDENTIFIED IN LOOP5:CTCCCGCGCCTCATTGCCTGGTTGCCTAC 13111212113103321132233211301    Q
+id5=bo4[c(2,1,6,7)]
+id5_=id5[which(id5$g!='NA'),]##7
+
+###we repeat this steps till we are able to detect new alleles and phase new individuals.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
